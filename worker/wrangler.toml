@@ -22,11 +22,11 @@ run_worker_first = true
 # SETTINGS = pengaturan dari halaman /admin (kunci Melo, markup, mode sandbox)
 [[kv_namespaces]]
 binding = "ORDERS"
-id = "GANTI_DENGAN_ID_KV_ORDERS"
+id = "96cf39a816c94dde8c4fbc7f3a829ec8"
 
 [[kv_namespaces]]
 binding = "SETTINGS"
-id = "GANTI_DENGAN_ID_KV_SETTINGS"
+id = "3d45222fc3974ac185707d14d7ed0bc1"
 
 # Nilai bawaan. Pengaturan di halaman /admin (KV SETTINGS) menimpa ini.
 # Kunci Melo & PIN sebaiknya dipasang sebagai SECRET, bukan di sini:
