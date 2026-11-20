@@ -3,20 +3,25 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#fbf6ec">
 <title>MoonBoy Store — Admin</title>
 <link rel="stylesheet" href="style.css">
+<link rel="icon" type="image/png" href="logo.png">
 </head>
 <body>
 <div class="wrap wrap-narrow">
   <header class="site">
-    <div class="logo">🌙</div>
-    <div>
-      <div class="brand-name">Admin Toko</div>
-      <div class="tagline">Pengaturan khusus pemilik MoonBoy Store.</div>
+    <div class="head-in">
+      <div class="logo"><img src="logo.png" alt="MoonBoy Store" onerror="this.parentNode.textContent='🌙'"></div>
+      <div>
+        <div class="brand-name">Admin Toko</div>
+        <div class="tagline">Pengaturan khusus pemilik MoonBoy Store.</div>
+      </div>
     </div>
   </header>
 
   <div class="panel" id="pin-panel">
+   <div class="panel-in">
     <h2>Masuk Admin</h2>
     <div class="chosen">Masukkan PIN admin untuk membuka pengaturan.</div>
     <label class="field"><span>PIN Admin</span>
@@ -24,9 +29,11 @@
     </label>
     <button class="btn" id="btn-pin" type="button">Masuk</button>
     <div class="msg" id="pin-msg"></div>
+   </div>
   </div>
 
   <div class="panel" id="settings-panel" style="display:none">
+   <div class="panel-in">
     <h2>Koneksi Melo H2H</h2>
     <div class="chosen" id="conn-status"></div>
     <label class="field"><span>API Key <em id="st-apikey"></em></span>
@@ -53,6 +60,7 @@
     </label>
     <button class="btn" id="btn-save" type="button">Simpan Pengaturan</button>
     <div class="msg" id="save-msg"></div>
+   </div>
   </div>
 
   <footer class="site">Jangan bagikan PIN dan kunci API ke siapa pun.</footer>
