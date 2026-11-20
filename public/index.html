@@ -66,21 +66,34 @@ const CAT_LABEL = { 'Game': 'Game', 'Airtime & Data': 'Pulsa & Data', 'Gift Card
 const CAT_ORDER = ['Game', 'Airtime & Data', 'Gift Card', 'Ewallet', 'PLN', 'Social', 'Aplikasi & Langganan'];
 const POPULAR = ['Mobile Legends (ID)', 'Free Fire (ID)', 'Genshin Impact (ID)', 'PUBG Mobile (ID)', 'Valorant (ID)', 'Honor of Kings', 'Growtopia', 'Roblox (Via Login)'];
 const COVERS = {
-  'Mobile Legends (ID)': 'covers/mlbb.jpg',
-  'Free Fire (ID)': 'covers/freefire.jpg',
-  'Genshin Impact (ID)': 'covers/genshin.jpg',
-  'PUBG Mobile (ID)': 'covers/pubgm.jpg',
-  'Valorant (ID)': 'covers/valorant.jpg',
+  'Mobile Legends': 'covers/mlbb.jpg',
+  'Free Fire': 'covers/freefire.jpg',
+  'Genshin Impact': 'covers/genshin.jpg',
+  'PUBG Mobile': 'covers/pubgm.jpg',
+  'Valorant': 'covers/valorant.jpg',
   'Honor of Kings': 'covers/hok.jpg',
-  'Roblox (Via Login)': 'covers/roblox.jpg',
+  'Roblox': 'covers/roblox.jpg',
   'Growtopia': 'covers/growtopia.jpg',
-  'Arena of Valor (ID)': 'covers/aov.jpg',
-  'Call of Duty Mobile': 'covers/codm.jpg',
+  'Arena of Valor': 'covers/aov.jpg',
+  'Call of Duty': 'covers/codm.jpg',
   'Stumble Guys': 'covers/stumble.jpg',
   'Super SUS': 'covers/supersus.jpg',
   'Sausage Man': 'covers/sausage.jpg',
-  'Point Blank (ID)': 'covers/pointblank.jpg',
+  'Point Blank': 'covers/pointblank.jpg',
+  'Honkai: Star Rail': 'covers/hsr.jpg',
+  'Zenless Zone Zero': 'covers/zzz.jpg',
+  'Wuthering Waves': 'covers/wuwa.jpg',
+  'eFootball': 'covers/efootball.jpg',
+  'Netflix': 'covers/netflix.jpg',
+  'Spotify': 'covers/spotify.jpg',
+  'YouTube': 'covers/youtube.jpg',
+  'Disney': 'covers/disney.jpg',
+  'Vidio': 'covers/vidio.jpg',
+  'Google Play': 'covers/gplay.jpg',
+  'Steam': 'covers/steam.jpg',
+  'PlayStation': 'covers/ps.jpg',
 };
+const COVER_KEYS = Object.keys(COVERS).sort((a, b) => b.length - a.length);
 const CAT_COVERS = {
   'Airtime & Data': 'covers/cat-pulsa.jpg',
   'Gift Card': 'covers/cat-giftcard.jpg',
@@ -105,7 +118,7 @@ let popularBrands = [];
 let activeCat = 'all';
 let query = '';
 
-function catOf(b) { return b.category || 'Lainnya'; }
+function catOf(b) { const c = b.category || 'Lainnya'; return /pulsa|airtime/i.test(c) ? 'Airtime & Data' : c; }
 function catLabel(c) { return CAT_LABEL[c] || c; }
 function emojiFor(b) {
   const key = String(b.name || '').toLowerCase();
@@ -113,7 +126,12 @@ function emojiFor(b) {
   return CAT_EMOJI[catOf(b)] || '🎮';
 }
 function byName(a, b) { return a.name.localeCompare(b.name, 'id'); }
-function coverFor(b) { return COVERS[b.name] || CAT_COVERS[catOf(b)] || null; }
+function coverFor(b) {
+  const n = String(b.name || '');
+  if (COVERS[n]) return COVERS[n];
+  for (const k of COVER_KEYS) if (n.startsWith(k)) return COVERS[k];
+  return CAT_COVERS[catOf(b)] || null;
+}
 function gradientFor(b) {
   const s = String(b.name || '');
   let h = 0;
@@ -156,6 +174,7 @@ function makeCard(b) {
     img.alt = '';
     img.loading = 'lazy';
     img.addEventListener('error', () => img.remove());
+    img.addEventListener('load', () => { fallback.style.display = 'none'; });
     img.src = cover;
     media.appendChild(img);
   }
