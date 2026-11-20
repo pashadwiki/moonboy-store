@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MoonBoy Store — Pilih Nominal</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← Semua game</a>
+  <h1 class="page" id="brand-name">Memuat…</h1>
+  <div class="sub">Pilih nominal, isi ID akun kamu, lalu klik Beli Sekarang.</div>
+
+  <div id="demo-banner" class="banner" style="display:none">
+    Mode demo: harga masih contoh dan pesanan belum bisa diproses.
+  </div>
+
+  <div id="loading" class="loading">Memuat nominal…</div>
+  <div id="products"></div>
+
+  <div class="panel" id="order-panel" style="display:none">
+    <h2>Isi data akun</h2>
+    <div class="chosen" id="chosen"></div>
+    <div id="form-fields"></div>
+    <div class="notice" id="form-notice" style="display:none"></div>
+
+    <div id="nick-box" style="display:none">
+      <button class="btn secondary" id="btn-nick" type="button">Cek nickname dulu</button>
+      <div class="msg" id="nick-result"></div>
+    </div>
+
+    <button class="btn" id="btn-order" type="button">Beli Sekarang</button>
+    <div class="msg" id="order-result"></div>
+  </div>
+
+  <footer class="site">Pastikan ID yang kamu isi benar — item dikirim sesuai ID tujuan.</footer>
+</div>
+
+<script>
+const params = new URLSearchParams(location.search);
+const brandId = params.get('brand_id');
+const rp = (n) => 'Rp' + new Intl.NumberFormat('id-ID').format(n);
+let products = [];
+let selected = null;
+let nicknameGame = null;
+let isDemo = false;
+
+function showMsg(id, text, kind) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = 'msg show ' + kind;
+}
+
+async function load() {
+  const loading = document.getElementById('loading');
+  if (!brandId) { loading.textContent = 'Brand tidak ditemukan.'; return; }
+  try {
+    const res = await fetch('/api/products?brand_id=' + encodeURIComponent(brandId));
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal memuat');
+    isDemo = Boolean(data.demo);
+    if (isDemo) document.getElementById('demo-banner').style.display = 'block';
+    document.getElementById('brand-name').textContent = (data.brand && data.brand.name) || 'Top Up';
+    document.title = 'MoonBoy Store — ' + document.getElementById('brand-name').textContent;
+    products = data.products || [];
+    loading.style.display = 'none';
+    if (!products.length) { loading.style.display = 'block'; loading.textContent = 'Belum ada nominal yang tersedia.'; return; }
+    const box = document.getElementById('products');
+    products.forEach((p, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'product';
+      btn.type = 'button';
+      btn.innerHTML = '<span><span class="pname"></span><span class="ptype"></span></span><span class="price"></span>';
+      btn.querySelector('.pname').textContent = p.name;
+      btn.querySelector('.ptype').textContent = p.type_name || '';
+      btn.querySelector('.price').textContent = rp(p.sell_price);
+      btn.addEventListener('click', () => selectProduct(i, btn));
+      box.appendChild(btn);
+    });
+    detectNicknameGame((data.brand && data.brand.name) || '');
+  } catch (e) {
+    loading.textContent = 'Gagal memuat nominal. Coba segarkan halaman.';
+  }
+}
+
+async function detectNicknameGame(brandName) {
+  if (isDemo) return;
+  try {
+    const res = await fetch('/api/nickname-games');
+    const data = await res.json();
+    if (!res.ok || !data.games) return;
+    const wanted = brandName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    nicknameGame = data.games.find((g) => {
+      const gn = g.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+      return gn && (wanted.includes(gn) || gn.includes(wanted));
+    }) || null;
+    if (nicknameGame) document.getElementById('nick-box').style.display = 'block';
+  } catch { /* cek nickname opsional */ }
+}
+
+function selectProduct(index, btn) {
+  selected = products[index];
+  document.querySelectorAll('.product').forEach((el) => el.classList.remove('selected'));
+  btn.classList.add('selected');
+  const panel = document.getElementById('order-panel');
+  panel.style.display = 'block';
+  document.getElementById('chosen').textContent = selected.name + ' — ' + rp(selected.sell_price);
+  const fieldsBox = document.getElementById('form-fields');
+  fieldsBox.innerHTML = '';
+  const fields = (selected.form && selected.form.fields) || [{ key: 'customer_target', name: 'ID Tujuan', type: 'text' }];
+  fields.forEach((f, i) => {
+    const label = document.createElement('label');
+    label.className = 'field';
+    const span = document.createElement('span');
+    span.textContent = f.name;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.id = 'field-' + i;
+    input.dataset.fieldKey = f.key;
+    input.autocomplete = 'off';
+    label.appendChild(span);
+    label.appendChild(input);
+    fieldsBox.appendChild(label);
+  });
+  const notice = document.getElementById('form-notice');
+  if (selected.form && selected.form.notice) {
+    notice.textContent = selected.form.notice;
+    notice.style.display = 'block';
+  } else {
+    notice.style.display = 'none';
+  }
+  document.getElementById('nick-result').className = 'msg';
+  document.getElementById('order-result').className = 'msg';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Aturan Melo: field pertama -> customer_target, kedua -> customer_target_zone,
+// sisanya -> additional_data.
+function collectForm() {
+  const inputs = document.querySelectorAll('#form-fields input');
+  const out = { customer_target: '', customer_target_zone: '', additional_data: {} };
+  inputs.forEach((input, i) => {
+    const val = input.value.trim();
+    if (i === 0) out.customer_target = val;
+    else if (i === 1) out.customer_target_zone = val;
+    else if (val) out.additional_data[input.dataset.fieldKey] = val;
+  });
+  return out;
+}
+
+document.getElementById('btn-nick').addEventListener('click', async () => {
+  if (!nicknameGame || !selected) return;
+  const form = collectForm();
+  if (!form.customer_target) { showMsg('nick-result', 'Isi ID kamu dulu, baru cek nickname.', 'err'); return; }
+  const btn = document.getElementById('btn-nick');
+  btn.disabled = true; btn.textContent = 'Mengecek…';
+  try {
+    const q = new URLSearchParams({ game_code: nicknameGame.game_code, target: form.customer_target });
+    if (form.customer_target_zone) q.set('zone', form.customer_target_zone);
+    const res = await fetch('/api/check-nickname?' + q.toString());
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Cek gagal');
+    if (data.found) showMsg('nick-result', 'Nickname ditemukan: ' + (data.username || '-') + (data.region ? ' (' + data.region + ')' : ''), 'ok');
+    else showMsg('nick-result', 'ID tidak ditemukan. Periksa lagi ID/zone kamu.', 'err');
+  } catch (e) {
+    showMsg('nick-result', e.message, 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Cek nickname dulu';
+  }
+});
+
+document.getElementById('btn-order').addEventListener('click', async () => {
+  if (!selected) return;
+  const form = collectForm();
+  if (!form.customer_target) { showMsg('order-result', 'ID tujuan belum diisi.', 'err'); return; }
+  const btn = document.getElementById('btn-order');
+  btn.disabled = true; btn.textContent = 'Memproses…';
+  try {
+    const payload = { sku_code: selected.sku_code, customer_target: form.customer_target, brand_id: brandId };
+    if (form.customer_target_zone) payload.customer_target_zone = form.customer_target_zone;
+    if (Object.keys(form.additional_data).length) payload.additional_data = form.additional_data;
+    const res = await fetch('/api/order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (data.buyer_trx_id) {
+      location.href = 'order.html?id=' + encodeURIComponent(data.buyer_trx_id);
+      return;
+    }
+    throw new Error(data.error || 'Pesanan gagal dibuat.');
+  } catch (e) {
+    showMsg('order-result', e.message, 'err');
+    btn.disabled = false; btn.textContent = 'Beli Sekarang';
+  }
+});
+
+load();
+</script>
+</body>
+</html>

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MoonBoy Store — Admin</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="logo">🌙</div>
+    <div>
+      <div class="brand-name">Admin Toko</div>
+      <div class="tagline">Pengaturan khusus pemilik MoonBoy Store.</div>
+    </div>
+  </header>
+
+  <div class="panel" id="pin-panel">
+    <h2>Masuk Admin</h2>
+    <div class="chosen">Masukkan PIN admin untuk membuka pengaturan.</div>
+    <label class="field"><span>PIN Admin</span>
+      <input type="password" id="pin" inputmode="numeric" autocomplete="off">
+    </label>
+    <button class="btn" id="btn-pin" type="button">Masuk</button>
+    <div class="msg" id="pin-msg"></div>
+  </div>
+
+  <div class="panel" id="settings-panel" style="display:none">
+    <h2>Koneksi Melo H2H</h2>
+    <div class="chosen" id="conn-status"></div>
+    <label class="field"><span>API Key <em id="st-apikey"></em></span>
+      <input type="password" id="apiKey" placeholder="Tempel API Key dari dashboard Melo" autocomplete="off">
+    </label>
+    <label class="field"><span>Secret Key <em id="st-secretkey"></em></span>
+      <input type="password" id="secretKey" placeholder="Tempel Secret Key dari dashboard Melo" autocomplete="off">
+    </label>
+    <label class="field"><span>Webhook Secret <em id="st-webhook"></em></span>
+      <input type="password" id="webhookSecret" placeholder="Tempel Webhook Secret dari dashboard Melo" autocomplete="off">
+    </label>
+    <p class="notice">Kolom yang dikosongkan tidak mengubah nilai yang sudah tersimpan. Kunci tidak pernah ditampilkan kembali di halaman ini.</p>
+
+    <h2 style="margin-top:18px">Mode &amp; Harga</h2>
+    <label class="checkrow"><input type="checkbox" id="sandbox"> <span>Mode sandbox (simulasi, tanpa saldo/uang asli)</span></label>
+    <label class="field"><span>Markup (%)</span>
+      <input type="number" id="markupPercent" min="0" max="1000" step="1">
+    </label>
+    <label class="field"><span>Pembulatan harga (Rp)</span>
+      <input type="number" id="rounding" min="1" step="1">
+    </label>
+    <label class="field"><span>PIN baru (opsional, kosongkan bila tidak ganti)</span>
+      <input type="password" id="newPin" autocomplete="off">
+    </label>
+    <button class="btn" id="btn-save" type="button">Simpan Pengaturan</button>
+    <div class="msg" id="save-msg"></div>
+  </div>
+
+  <footer class="site">Jangan bagikan PIN dan kunci API ke siapa pun.</footer>
+</div>
+
+<script>
+let pin = '';
+function showMsg(id, text, kind) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = 'msg show ' + kind;
+}
+function applyStatus(s) {
+  document.getElementById('st-apikey').textContent = s.keysSet.apiKey ? '(sudah terisi)' : '(belum diisi)';
+  document.getElementById('st-secretkey').textContent = s.keysSet.secretKey ? '(sudah terisi)' : '(belum diisi)';
+  document.getElementById('st-webhook').textContent = s.keysSet.webhookSecret ? '(sudah terisi)' : '(belum diisi)';
+  document.getElementById('conn-status').textContent = s.active
+    ? 'Status: toko AKTIF — kunci API sudah terhubung ke Melo.'
+    : 'Status: toko BELUM aktif — isi API Key dan Secret Key dulu.';
+  document.getElementById('sandbox').checked = Boolean(s.sandbox);
+  document.getElementById('markupPercent').value = s.markupPercent;
+  document.getElementById('rounding').value = s.rounding;
+}
+
+document.getElementById('btn-pin').addEventListener('click', async () => {
+  pin = document.getElementById('pin').value.trim();
+  if (!pin) { showMsg('pin-msg', 'PIN belum diisi.', 'err'); return; }
+  try {
+    const res = await fetch('/api/admin/status', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal masuk');
+    document.getElementById('pin-panel').style.display = 'none';
+    document.getElementById('settings-panel').style.display = 'block';
+    applyStatus(data);
+  } catch (e) {
+    showMsg('pin-msg', e.message, 'err');
+  }
+});
+
+document.getElementById('btn-save').addEventListener('click', async () => {
+  const payload = {
+    pin,
+    apiKey: document.getElementById('apiKey').value.trim(),
+    secretKey: document.getElementById('secretKey').value.trim(),
+    webhookSecret: document.getElementById('webhookSecret').value.trim(),
+    sandbox: document.getElementById('sandbox').checked,
+    markupPercent: document.getElementById('markupPercent').value,
+    rounding: document.getElementById('rounding').value,
+    newPin: document.getElementById('newPin').value.trim(),
+  };
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true; btn.textContent = 'Menyimpan…';
+  try {
+    const res = await fetch('/api/admin/config', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal menyimpan');
+    if (payload.newPin) pin = payload.newPin;
+    document.getElementById('apiKey').value = '';
+    document.getElementById('secretKey').value = '';
+    document.getElementById('webhookSecret').value = '';
+    document.getElementById('newPin').value = '';
+    applyStatus(data);
+    showMsg('save-msg', 'Pengaturan tersimpan.', 'ok');
+  } catch (e) {
+    showMsg('save-msg', e.message, 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Simpan Pengaturan';
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+# MoonBoy Store — Cloudflare Workers
+# Deploy: lihat DEPLOY.md (jalur dashboard Git / wrangler CLI).
+name = "moonboy-store"
+main = "src/worker.js"
+compatibility_date = "2025-11-01"
+
+# Frontend statis (salinan dari ../public) dilayani sebagai Workers
+# static assets. binding ASSETS membuat Worker bisa mengambilnya lewat
+# env.ASSETS.fetch; run_worker_first memastikan Worker selalu jalan dulu
+# supaya /api/*, /webhook, dan pemetaan / -> index.html, /admin -> admin.html
+# persis seperti versi Node.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = true
+
+# === KV NAMESPACES — WAJIB DIBUAT DULU, lalu tempel id-nya di sini ===
+# Buat lewat dashboard Cloudflare (Storage & Databases > KV > Create namespace)
+# atau CLI:  wrangler kv namespace create ORDERS
+#            wrangler kv namespace create SETTINGS
+# ORDERS   = data pesanan (key: buyer_trx_id)
+# SETTINGS = pengaturan dari halaman /admin (kunci Melo, markup, mode sandbox)
+[[kv_namespaces]]
+binding = "ORDERS"
+id = "GANTI_DENGAN_ID_KV_ORDERS"
+
+[[kv_namespaces]]
+binding = "SETTINGS"
+id = "GANTI_DENGAN_ID_KV_SETTINGS"
+
+# Nilai bawaan. Pengaturan di halaman /admin (KV SETTINGS) menimpa ini.
+# Kunci Melo & PIN sebaiknya dipasang sebagai SECRET, bukan di sini:
+#   wrangler secret put MELO_API_KEY
+#   wrangler secret put MELO_SECRET_KEY
+#   wrangler secret put MELO_WEBHOOK_SECRET
+#   wrangler secret put ADMIN_PIN
+[vars]
+SANDBOX = "true"
+MARKUP_PERCENT = "12"
+ROUNDING = "100"
+# ADMIN_PIN bawaan bila tidak di-set: "123456" — WAJIB diganti!
