@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MoonBoy Store — Top Up Game Murah & Cepat</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <div class="logo">🌙</div>
+    <div>
+      <div class="brand-name">MoonBoy Store</div>
+      <div class="tagline">Top up game cepat, aman, harga bersahabat.</div>
+    </div>
+  </header>
+
+  <div id="demo-banner" class="banner" style="display:none">
+    Mode demo: toko belum aktif, harga yang tampil masih contoh. Pemilik toko sedang menyiapkan akun penjualnya.
+  </div>
+
+  <div id="brand-grid" class="grid"></div>
+  <div id="loading" class="loading">Memuat daftar game…</div>
+
+  <footer class="site">MoonBoy Store — top up otomatis 24 jam.<br>Simpan nomor pesanan kamu untuk cek status.</footer>
+</div>
+
+<script>
+const EMOJI = { 'mobile legends': '⚔️', 'free fire': '🔥', 'pubg': '🎯', 'genshin': '✨', 'roblox': '🧱', 'honor of kings': '👑', 'valorant': '🎯' };
+function emojiFor(name) {
+  const key = String(name || '').toLowerCase();
+  for (const k of Object.keys(EMOJI)) if (key.includes(k)) return EMOJI[k];
+  return '🎮';
+}
+async function load() {
+  const grid = document.getElementById('brand-grid');
+  const loading = document.getElementById('loading');
+  try {
+    const res = await fetch('/api/brands');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal memuat');
+    if (data.demo) document.getElementById('demo-banner').style.display = 'block';
+    loading.style.display = 'none';
+    if (!data.brands.length) { loading.style.display = 'block'; loading.textContent = 'Belum ada game yang dijual.'; return; }
+    for (const b of data.brands) {
+      const a = document.createElement('a');
+      a.className = 'card';
+      a.href = 'brand.html?brand_id=' + encodeURIComponent(b.brand_id);
+      a.innerHTML = '<div class="game-icon"></div><div class="game-name"></div><div class="game-cat"></div>';
+      a.querySelector('.game-icon').textContent = emojiFor(b.name);
+      a.querySelector('.game-name').textContent = b.name;
+      a.querySelector('.game-cat').textContent = b.category || (b.types && b.types.join(' • ')) || 'Top up';
+      grid.appendChild(a);
+    }
+  } catch (e) {
+    loading.textContent = 'Gagal memuat daftar game. Coba segarkan halaman.';
+  }
+}
+load();
+</script>
+</body>
+</html>

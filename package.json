@@ -1,0 +1,1 @@
+{"description":"MoonBoy Store — web top-up store powered by the Melo H2H API (zero dependencies, Node built-ins only)","engines":{"node":">=20"},"main":"server.js","name":"moonboy-store","private":true,"scripts":{"start":"node server.js","test":"node --test \"test/**/*.test.js\""},"version":"1.0.0"}
