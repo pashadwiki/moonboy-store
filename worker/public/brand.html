@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="wrap">
+<div class="wrap wrap-narrow">
   <a class="back" href="index.html">← Semua game</a>
   <h1 class="page" id="brand-name">Memuat…</h1>
   <div class="sub">Pilih nominal, isi ID akun kamu, lalu klik Beli Sekarang.</div>
@@ -63,11 +63,11 @@ async function load() {
     if (isDemo) document.getElementById('demo-banner').style.display = 'block';
     document.getElementById('brand-name').textContent = (data.brand && data.brand.name) || 'Top Up';
     document.title = 'MoonBoy Store — ' + document.getElementById('brand-name').textContent;
-    products = data.products || [];
+    products = (data.products || []).slice().sort((a, b) => (Number(a.sell_price) || 0) - (Number(b.sell_price) || 0));
     loading.style.display = 'none';
     if (!products.length) { loading.style.display = 'block'; loading.textContent = 'Belum ada nominal yang tersedia.'; return; }
     const box = document.getElementById('products');
-    products.forEach((p, i) => {
+    const makeBtn = (p, i) => {
       const btn = document.createElement('button');
       btn.className = 'product';
       btn.type = 'button';
@@ -76,8 +76,34 @@ async function load() {
       btn.querySelector('.ptype').textContent = p.type_name || '';
       btn.querySelector('.price').textContent = rp(p.sell_price);
       btn.addEventListener('click', () => selectProduct(i, btn));
-      box.appendChild(btn);
-    });
+      return btn;
+    };
+    const types = [...new Set(products.map((p) => p.type_name || ''))];
+    if (types.length > 1) {
+      const groups = new Map();
+      products.forEach((p, i) => {
+        const t = p.type_name || 'Lainnya';
+        if (!groups.has(t)) groups.set(t, []);
+        groups.get(t).push([p, i]);
+      });
+      const sortedGroups = [...groups.entries()].sort((a, b) =>
+        Math.min(...a[1].map((x) => Number(x[0].sell_price) || 0)) - Math.min(...b[1].map((x) => Number(x[0].sell_price) || 0)));
+      for (const [t, items] of sortedGroups) {
+        const h = document.createElement('div');
+        h.className = 'type-title';
+        const label = document.createElement('span');
+        label.textContent = t;
+        const count = document.createElement('span');
+        count.className = 'type-count';
+        count.textContent = items.length + ' pilihan';
+        h.appendChild(label);
+        h.appendChild(count);
+        box.appendChild(h);
+        items.forEach(([p, i]) => box.appendChild(makeBtn(p, i)));
+      }
+    } else {
+      products.forEach((p, i) => box.appendChild(makeBtn(p, i)));
+    }
     detectNicknameGame((data.brand && data.brand.name) || '');
   } catch (e) {
     loading.textContent = 'Gagal memuat nominal. Coba segarkan halaman.';

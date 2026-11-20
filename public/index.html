@@ -16,25 +16,194 @@
     </div>
   </header>
 
+  <div class="hero">
+    <img src="banner.jpg" alt="MoonBoy Store" onerror="this.closest('.hero').style.display='none'">
+  </div>
+
   <div id="demo-banner" class="banner" style="display:none">
     Mode demo: toko belum aktif, harga yang tampil masih contoh. Pemilik toko sedang menyiapkan akun penjualnya.
   </div>
 
-  <div id="brand-grid" class="grid"></div>
+  <div class="search">
+    <span class="search-icon">🔍</span>
+    <input type="search" id="search" placeholder="Cari game, pulsa, gift card…" autocomplete="off">
+  </div>
+
+  <div class="chips" id="chips"></div>
+
+  <section class="section" id="popular-section" style="display:none">
+    <div class="section-head">
+      <div class="section-title">🔥 Paling Laris</div>
+    </div>
+    <div class="grid" id="popular-grid"></div>
+  </section>
+
+  <div id="sections"></div>
+
+  <div id="no-result" class="empty" style="display:none">Tidak ada yang cocok. Coba kata kunci atau kategori lain.</div>
   <div id="loading" class="loading">Memuat daftar game…</div>
 
-  <footer class="site">MoonBoy Store — top up otomatis 24 jam.<br>Simpan nomor pesanan kamu untuk cek status.</footer>
+  <footer class="site">
+    <div class="foot-brand">🌙 MoonBoy Store</div>
+    <div class="trust">⚡ Proses instan &nbsp;•&nbsp; 🔒 Transaksi aman &nbsp;•&nbsp; 🕐 Buka 24 jam</div>
+    <div>Simpan nomor pesanan kamu untuk cek status.</div>
+  </footer>
 </div>
 
 <script>
-const EMOJI = { 'mobile legends': '⚔️', 'free fire': '🔥', 'pubg': '🎯', 'genshin': '✨', 'roblox': '🧱', 'honor of kings': '👑', 'valorant': '🎯' };
-function emojiFor(name) {
-  const key = String(name || '').toLowerCase();
+const EMOJI = { 'mobile legends': '⚔️', 'free fire': '🔥', 'pubg': '🎯', 'genshin': '✨', 'roblox': '🧱', 'honor of kings': '👑', 'valorant': '🎯', 'growtopia': '🌳' };
+const CAT_EMOJI = { 'Game': '🎮', 'Airtime & Data': '📱', 'Gift Card': '🎁', 'Ewallet': '👛', 'PLN': '💡', 'Social': '💬', 'Aplikasi & Langganan': '📺' };
+const CAT_LABEL = { 'Game': 'Game', 'Airtime & Data': 'Pulsa & Data', 'Gift Card': 'Gift Card', 'Ewallet': 'E-Wallet', 'PLN': 'PLN', 'Social': 'Social', 'Aplikasi & Langganan': 'Aplikasi & Langganan' };
+const CAT_ORDER = ['Game', 'Airtime & Data', 'Gift Card', 'Ewallet', 'PLN', 'Social', 'Aplikasi & Langganan'];
+const POPULAR = ['Mobile Legends (ID)', 'Free Fire (ID)', 'Genshin Impact (ID)', 'PUBG Mobile (ID)', 'Valorant (ID)', 'Honor of Kings', 'Growtopia', 'Roblox (Via Login)'];
+const COVERS = {
+  'Mobile Legends (ID)': 'covers/mlbb.jpg',
+  'Free Fire (ID)': 'covers/freefire.jpg',
+  'Genshin Impact (ID)': 'covers/genshin.jpg',
+  'PUBG Mobile (ID)': 'covers/pubgm.jpg',
+  'Valorant (ID)': 'covers/valorant.jpg',
+  'Honor of Kings': 'covers/hok.jpg',
+};
+
+let allBrands = [];
+let popularBrands = [];
+let activeCat = 'all';
+let query = '';
+
+function catOf(b) { return b.category || 'Lainnya'; }
+function catLabel(c) { return CAT_LABEL[c] || c; }
+function emojiFor(b) {
+  const key = String(b.name || '').toLowerCase();
   for (const k of Object.keys(EMOJI)) if (key.includes(k)) return EMOJI[k];
-  return '🎮';
+  return CAT_EMOJI[catOf(b)] || '🎮';
 }
+function byName(a, b) { return a.name.localeCompare(b.name, 'id'); }
+
+function fillCardBody(body, b) {
+  const icon = document.createElement('div');
+  icon.className = 'game-icon';
+  icon.textContent = emojiFor(b);
+  const name = document.createElement('div');
+  name.className = 'game-name';
+  name.textContent = b.name;
+  const cat = document.createElement('div');
+  cat.className = 'game-cat';
+  cat.textContent = catLabel(catOf(b)) || (b.types && b.types.join(' • ')) || 'Top up';
+  body.appendChild(icon);
+  body.appendChild(name);
+  body.appendChild(cat);
+  return icon;
+}
+
+function makeCard(b) {
+  const a = document.createElement('a');
+  a.className = 'card';
+  a.href = 'brand.html?brand_id=' + encodeURIComponent(b.brand_id);
+  fillCardBody(a, b);
+  return a;
+}
+
+function makePopularCard(b) {
+  const cover = COVERS[b.name];
+  if (!cover) return makeCard(b);
+  const a = document.createElement('a');
+  a.className = 'card has-cover';
+  a.href = 'brand.html?brand_id=' + encodeURIComponent(b.brand_id);
+  const img = document.createElement('img');
+  img.className = 'card-cover';
+  img.alt = b.name;
+  img.loading = 'lazy';
+  const body = document.createElement('div');
+  body.className = 'card-body';
+  const icon = fillCardBody(body, b);
+  icon.style.display = 'none';
+  img.addEventListener('error', () => {
+    img.style.display = 'none';
+    a.classList.remove('has-cover');
+    icon.style.display = 'flex';
+  });
+  img.src = cover;
+  a.appendChild(img);
+  a.appendChild(body);
+  return a;
+}
+
+function makeSection(title, list) {
+  const sec = document.createElement('section');
+  sec.className = 'section';
+  const head = document.createElement('div');
+  head.className = 'section-head';
+  const t = document.createElement('div');
+  t.className = 'section-title';
+  t.textContent = title;
+  const c = document.createElement('span');
+  c.className = 'section-count';
+  c.textContent = list.length + ' item';
+  head.appendChild(t);
+  head.appendChild(c);
+  const grid = document.createElement('div');
+  grid.className = 'grid';
+  for (const b of list) grid.appendChild(makeCard(b));
+  sec.appendChild(head);
+  sec.appendChild(grid);
+  return sec;
+}
+
+function orderedCategories() {
+  const present = [...new Set(allBrands.map(catOf))];
+  return present.sort((a, b) => {
+    const ia = CAT_ORDER.indexOf(a), ib = CAT_ORDER.indexOf(b);
+    if (ia !== -1 && ib !== -1) return ia - ib;
+    if (ia !== -1) return -1;
+    if (ib !== -1) return 1;
+    return a.localeCompare(b, 'id');
+  });
+}
+
+function buildChips() {
+  const box = document.getElementById('chips');
+  box.innerHTML = '';
+  const cats = ['all', ...orderedCategories()];
+  for (const c of cats) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'chip' + (c === activeCat ? ' active' : '');
+    btn.textContent = c === 'all' ? 'Semua' : catLabel(c);
+    btn.addEventListener('click', () => {
+      activeCat = c;
+      box.querySelectorAll('.chip').forEach((el) => el.classList.remove('active'));
+      btn.classList.add('active');
+      render();
+    });
+    box.appendChild(btn);
+  }
+}
+
+function render() {
+  const sections = document.getElementById('sections');
+  sections.innerHTML = '';
+  const q = query.trim().toLowerCase();
+  const popSec = document.getElementById('popular-section');
+  popSec.style.display = (!q && activeCat === 'all' && popularBrands.length) ? 'block' : 'none';
+  let shown = 0;
+  if (q) {
+    const matches = allBrands.filter((b) => b.name.toLowerCase().includes(q)).sort(byName);
+    if (matches.length) sections.appendChild(makeSection('🔍 Hasil Pencarian', matches));
+    shown = matches.length;
+  } else {
+    for (const c of orderedCategories()) {
+      if (activeCat !== 'all' && c !== activeCat) continue;
+      const list = allBrands.filter((b) => catOf(b) === c).sort(byName);
+      if (list.length) {
+        sections.appendChild(makeSection((CAT_EMOJI[c] ? CAT_EMOJI[c] + ' ' : '') + catLabel(c), list));
+        shown += list.length;
+      }
+    }
+  }
+  document.getElementById('no-result').style.display = shown ? 'none' : 'block';
+}
+
 async function load() {
-  const grid = document.getElementById('brand-grid');
   const loading = document.getElementById('loading');
   try {
     const res = await fetch('/api/brands');
@@ -42,21 +211,27 @@ async function load() {
     if (!res.ok) throw new Error(data.error || 'Gagal memuat');
     if (data.demo) document.getElementById('demo-banner').style.display = 'block';
     loading.style.display = 'none';
-    if (!data.brands.length) { loading.style.display = 'block'; loading.textContent = 'Belum ada game yang dijual.'; return; }
-    for (const b of data.brands) {
-      const a = document.createElement('a');
-      a.className = 'card';
-      a.href = 'brand.html?brand_id=' + encodeURIComponent(b.brand_id);
-      a.innerHTML = '<div class="game-icon"></div><div class="game-name"></div><div class="game-cat"></div>';
-      a.querySelector('.game-icon').textContent = emojiFor(b.name);
-      a.querySelector('.game-name').textContent = b.name;
-      a.querySelector('.game-cat').textContent = b.category || (b.types && b.types.join(' • ')) || 'Top up';
-      grid.appendChild(a);
+    allBrands = data.brands || [];
+    if (!allBrands.length) {
+      document.getElementById('no-result').style.display = 'block';
+      document.getElementById('no-result').textContent = 'Belum ada game yang dijual.';
+      return;
     }
+    popularBrands = POPULAR.map((n) => allBrands.find((b) => b.name === n)).filter(Boolean);
+    const popGrid = document.getElementById('popular-grid');
+    for (const b of popularBrands) popGrid.appendChild(makePopularCard(b));
+    buildChips();
+    render();
   } catch (e) {
     loading.textContent = 'Gagal memuat daftar game. Coba segarkan halaman.';
   }
 }
+
+document.getElementById('search').addEventListener('input', (e) => {
+  query = e.target.value;
+  render();
+});
+
 load();
 </script>
 </body>
